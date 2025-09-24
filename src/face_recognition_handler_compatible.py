@@ -19,12 +19,15 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 from PIL import Image
 import io
+import json
+import time
+from config import MODELS_DIR, DATA_DIR, LBPH_THRESHOLD
 
 
 class FaceRecognitionHandler:
     """Gerencia o reconhecimento facial e faces conhecidas."""
     
-    def __init__(self, models_dir: str = "models", tolerance: float = 0.6):
+    def __init__(self, models_dir: str = MODELS_DIR, tolerance: float = 0.6):
         """
         Inicializa o handler de reconhecimento facial.
         
@@ -55,10 +58,23 @@ class FaceRecognitionHandler:
         self.faces_database_file = os.path.join(self.models_dir, "known_faces.pkl")
         
     def _init_opencv_detection(self) -> None:
-        """Inicializa detecção com OpenCV apenas."""
+        """Inicializa detecção com OpenCV e (se disponível) reconhecimento LBPH.
+
+        - Detecção: Haar cascade
+        - Reconhecimento: LBPH (requer opencv-contrib-python)
+        """
         self.known_faces: Dict[str, Dict[str, Any]] = {}
         self.faces_database_file = os.path.join(self.models_dir, "opencv_faces.pkl")
-        
+
+        # Caminhos para treinamento e modelo LBPH
+        self.training_data_dir = os.path.join(DATA_DIR)
+        self.lbph_model_file = os.path.join(self.models_dir, "opencv_lbph.xml")
+        self.lbph_labels_file = os.path.join(self.models_dir, "lbph_labels.json")
+        self.lbph_threshold = LBPH_THRESHOLD
+        self.label_to_name: Dict[int, str] = {}
+        self.name_to_label: Dict[str, int] = {}
+        self.recognizer = None
+
         # Carrega classificador de faces
         try:
             cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -70,6 +86,17 @@ class FaceRecognitionHandler:
         except Exception as e:
             self.logger.error(f"Erro ao carregar classificador: {e}")
             self.face_cascade = None
+
+        # Inicializa LBPH se disponível
+        try:
+            if hasattr(cv2, 'face') and hasattr(cv2.face, 'LBPHFaceRecognizer_create'):
+                self.recognizer = cv2.face.LBPHFaceRecognizer_create()
+                self._load_lbph_model()
+            else:
+                self.logger.warning("LBPH indisponível: instale opencv-contrib-python para reconhecimento de identidade.")
+        except Exception as e:
+            self.logger.error(f"Erro ao inicializar LBPH: {e}")
+            self.recognizer = None
         
     def load_known_faces(self) -> bool:
         """
@@ -200,29 +227,53 @@ class FaceRecognitionHandler:
             return False
             
     def _add_face_with_opencv(self, name: str, image_array: np.ndarray) -> bool:
-        """Adiciona face usando apenas OpenCV."""
-        # Converte para formato OpenCV
-        if len(image_array.shape) == 3:
-            opencv_image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
-        else:
-            opencv_image = image_array
-            
-        # Detecta faces
-        faces = self._detect_faces_opencv(opencv_image)
-        
-        if not faces:
-            self.logger.warning(f"Nenhuma face encontrada na imagem para {name}")
+        """Adiciona imagem de treino para reconhecimento com OpenCV (LBPH).
+
+        - Salva recorte da face em escala de cinza em data/<name>/timestamp.jpg
+        - Re-treina o modelo LBPH automaticamente, se disponível
+        """
+        try:
+            # Converte para BGR se veio como RGB
+            if len(image_array.shape) == 3 and image_array.shape[2] == 3:
+                opencv_image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+            else:
+                opencv_image = image_array
+
+            # Extrai face
+            cropped = self._extract_face_region(opencv_image)
+            if cropped is None:
+                self.logger.warning(f"Nenhuma face encontrada na imagem para {name}")
+                return False
+
+            # Garante diretório da pessoa
+            person_dir = os.path.join(self.training_data_dir, name)
+            os.makedirs(person_dir, exist_ok=True)
+
+            # Converte para cinza e salva
+            gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            filename = os.path.join(person_dir, f"{int(time.time()*1000)}.jpg")
+            cv2.imwrite(filename, gray)
+
+            self.logger.info(f"Imagem de treino salva para {name}: {filename}")
+
+            # Treina/re-treina LBPH se disponível
+            if self.recognizer is not None:
+                trained = self._train_lbph_from_dataset()
+                if trained:
+                    self.logger.info("Modelo LBPH re-treinado com sucesso")
+                else:
+                    self.logger.warning("Falha ao re-treinar modelo LBPH")
+
+            # Mantém compatibilidade com estrutura antiga
+            self.known_faces[name] = {
+                'last_added': filename
+            }
+            self.save_known_faces()
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Erro ao adicionar face (OpenCV) {name}: {e}")
             return False
-            
-        # Salva dados da face (simplificado)
-        x, y, w, h = faces[0]
-        self.known_faces[name] = {
-            'coordinates': (x, y, w, h),
-            'added_date': str(cv2.getTickCount())
-        }
-        
-        self.logger.info(f"Face adicionada: {name}")
-        return self.save_known_faces()
         
     def _detect_faces_opencv(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
         """Detecta faces usando OpenCV."""
@@ -319,26 +370,73 @@ class FaceRecognitionHandler:
             'coordinates': face_coordinates,
             'total_faces': len(faces_found)
         }
+
+    # ======= API pública solicitada para modo compatível (sem dlib) =======
+    def train_model(self) -> bool:
+        """
+        Treina o modelo LBPH a partir de imagens em `data/<nome>/*.jpg`.
+
+        Returns:
+            True se o treinamento ocorreu com sucesso, False caso contrário.
+        """
+        if FACE_RECOGNITION_AVAILABLE:
+            # Para manter a API consistente, quando dlib estiver disponível,
+            # apenas confirmamos que as faces conhecidas estão carregadas.
+            return True
+        return self._train_lbph_from_dataset()
+
+    def predict(self, frame: np.ndarray) -> Dict[str, Any]:
+        """
+        Prediz identidades no frame usando o pipeline ativo.
+
+        - Com dlib/face_recognition: usa encodings
+        - Sem dlib: usa LBPH se treinado; caso contrário, apenas detecção
+
+        Args:
+            frame: Imagem BGR (OpenCV) para análise
+
+        Returns:
+            Dicionário com chaves: faces, confidence, coordinates, total_faces
+        """
+        if FACE_RECOGNITION_AVAILABLE:
+            return self._recognize_with_face_recognition(frame)
+        return self._recognize_with_opencv(frame)
         
     def _recognize_with_opencv(self, frame: np.ndarray) -> Dict[str, Any]:
-        """Reconhece usando apenas OpenCV (detecção)."""
+        """Reconhece usando OpenCV.
+
+        - Se LBPH estiver treinado, retorna identidades; caso contrário, apenas detecção
+        """
         face_coords = self._detect_faces_opencv(frame)
-        
-        faces_found = []
-        confidence_scores = []
-        face_coordinates = []
-        
+
+        faces_found: List[str] = []
+        confidence_scores: List[float] = []
+        face_coordinates: List[Dict[str, int]] = []
+
         for x, y, w, h in face_coords:
-            faces_found.append("Pessoa Detectada")
-            confidence_scores.append(0.8)  # Confiança simulada
-            
-            face_coordinates.append({
-                'top': y,
-                'right': x + w,
-                'bottom': y + h,
-                'left': x
-            })
-        
+            name = "Pessoa Detectada"
+            score = 0.0
+
+            if self.recognizer is not None and self.label_to_name:
+                try:
+                    face_roi = frame[y:y+h, x:x+w]
+                    gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
+                    label, confidence = self.recognizer.predict(gray)
+                    # Menor 'confidence' => melhor; limiar empírico
+                    threshold = getattr(self, 'lbph_threshold', 70.0)
+                    if confidence <= threshold and label in self.label_to_name:
+                        name = self.label_to_name[label]
+                        score = max(0.0, 1.0 - (confidence/100.0))
+                    else:
+                        name = "Desconhecido"
+                        score = 0.0
+                except Exception as e:
+                    self.logger.error(f"Erro na predição LBPH: {e}")
+
+            faces_found.append(name)
+            confidence_scores.append(float(score))
+            face_coordinates.append({'top': y, 'right': x + w, 'bottom': y + h, 'left': x})
+
         return {
             'faces': faces_found,
             'confidence': confidence_scores,
@@ -401,6 +499,8 @@ class FaceRecognitionHandler:
         if FACE_RECOGNITION_AVAILABLE:
             return self.known_face_names.copy()
         else:
+            if getattr(self, 'label_to_name', None):
+                return sorted(set(self.label_to_name.values()))
             return list(self.known_faces.keys())
         
     def get_faces_count(self) -> int:
@@ -408,6 +508,8 @@ class FaceRecognitionHandler:
         if FACE_RECOGNITION_AVAILABLE:
             return len(self.known_face_names)
         else:
+            if getattr(self, 'label_to_name', None):
+                return len(set(self.label_to_name.values()))
             return len(self.known_faces)
         
     def remove_known_face(self, name: str) -> bool:
@@ -422,9 +524,26 @@ class FaceRecognitionHandler:
                     self.logger.info(f"Face removida: {name}")
                     return True
             else:
+                # Remove dataset dessa pessoa e re-treina
+                removed = False
+                person_dir = os.path.join(self.training_data_dir, name)
+                try:
+                    if os.path.isdir(person_dir):
+                        for f in os.listdir(person_dir):
+                            try:
+                                os.remove(os.path.join(person_dir, f))
+                            except Exception:
+                                pass
+                        os.rmdir(person_dir)
+                        removed = True
+                except Exception as e:
+                    self.logger.error(f"Erro ao remover pasta de {name}: {e}")
                 if name in self.known_faces:
                     del self.known_faces[name]
-                    self.save_known_faces()
+                self.save_known_faces()
+                if self.recognizer is not None:
+                    self._train_lbph_from_dataset()
+                if removed:
                     self.logger.info(f"Face removida: {name}")
                     return True
                     
@@ -442,15 +561,109 @@ class FaceRecognitionHandler:
                 self.known_face_encodings.clear()
                 self.known_face_names.clear()
             else:
+                # Limpa dataset e modelo LBPH
+                try:
+                    if os.path.isdir(self.training_data_dir):
+                        for root, dirs, files in os.walk(self.training_data_dir, topdown=False):
+                            for f in files:
+                                try:
+                                    os.remove(os.path.join(root, f))
+                                except Exception:
+                                    pass
+                            if root != self.training_data_dir:
+                                try:
+                                    os.rmdir(root)
+                                except Exception:
+                                    pass
+                except Exception as e:
+                    self.logger.error(f"Erro ao limpar dataset: {e}")
+
+                try:
+                    if os.path.exists(self.lbph_model_file):
+                        os.remove(self.lbph_model_file)
+                    if os.path.exists(self.lbph_labels_file):
+                        os.remove(self.lbph_labels_file)
+                except Exception as e:
+                    self.logger.error(f"Erro ao remover arquivos de modelo: {e}")
+
                 self.known_faces.clear()
-            
+
             success = self.save_known_faces()
-            
             if success:
                 self.logger.info("Todas as faces conhecidas foram removidas")
-                
             return success
-            
         except Exception as e:
             self.logger.error(f"Erro ao limpar faces conhecidas: {e}")
             return False
+
+    def _extract_face_region(self, image: np.ndarray) -> Optional[np.ndarray]:
+        """Extrai a região da primeira face detectada (BGR)."""
+        faces = self._detect_faces_opencv(image)
+        if not faces:
+            return None
+        x, y, w, h = faces[0]
+        return image[y:y+h, x:x+w]
+
+    def _train_lbph_from_dataset(self) -> bool:
+        """Treina o modelo LBPH a partir de data/<nome>/*.jpg."""
+        if self.recognizer is None:
+            self.logger.warning("Reconhecedor LBPH indisponível (opencv-contrib ausente?)")
+            return False
+
+        images: List[np.ndarray] = []
+        labels: List[int] = []
+        label_to_name: Dict[int, str] = {}
+        name_to_label: Dict[str, int] = {}
+
+        os.makedirs(self.training_data_dir, exist_ok=True)
+
+        current_label = 0
+        for name in sorted(os.listdir(self.training_data_dir)):
+            person_dir = os.path.join(self.training_data_dir, name)
+            if not os.path.isdir(person_dir):
+                continue
+            if name not in name_to_label:
+                name_to_label[name] = current_label
+                label_to_name[current_label] = name
+                current_label += 1
+            label_val = name_to_label[name]
+
+            for filename in os.listdir(person_dir):
+                if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
+                    continue
+                path = os.path.join(person_dir, filename)
+                img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                if img is None or img.size == 0:
+                    continue
+                images.append(img)
+                labels.append(label_val)
+
+        if not images:
+            self.logger.warning("Nenhuma imagem de treino encontrada para LBPH")
+            return False
+
+        try:
+            self.recognizer.train(images, np.array(labels))
+            os.makedirs(self.models_dir, exist_ok=True)
+            self.recognizer.write(self.lbph_model_file)
+            with open(self.lbph_labels_file, 'w', encoding='utf-8') as f:
+                json.dump({"label_to_name": label_to_name, "name_to_label": name_to_label}, f, ensure_ascii=False, indent=2)
+            self.label_to_name = label_to_name
+            self.name_to_label = name_to_label
+            return True
+        except Exception as e:
+            self.logger.error(f"Erro ao treinar LBPH: {e}")
+            return False
+
+    def _load_lbph_model(self) -> None:
+        """Carrega o modelo LBPH e labels, se existirem."""
+        try:
+            if os.path.exists(self.lbph_model_file) and os.path.exists(self.lbph_labels_file):
+                self.recognizer.read(self.lbph_model_file)
+                with open(self.lbph_labels_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                self.label_to_name = {int(k): v for k, v in data.get("label_to_name", {}).items()}
+                self.name_to_label = {k: int(v) for k, v in data.get("name_to_label", {}).items()}
+                self.logger.info("Modelo LBPH carregado com sucesso")
+        except Exception as e:
+            self.logger.error(f"Erro ao carregar modelo LBPH: {e}")

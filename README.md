@@ -10,9 +10,9 @@ Desenvolver um sistema de controle de acesso baseado em reconhecimento facial, p
 
 - **🔧 Arquitetura Cliente-Servidor**: Comunicação via sockets TCP
 - **⚡ ThreadPool**: Gerenciamento eficiente de conexões simultâneas
-- **🧠 Reconhecimento Facial**: Usando bibliotecas `face_recognition` e `OpenCV`
+- **🧠 Reconhecimento Facial**: Caminho compatível usando OpenCV (LBPH); usa `face_recognition` se disponível
 - **📹 Captura de Vídeo**: Suporte para câmera do PC e webcam
-- **🔒 Controle de Acesso**: Base para sistema de fechadura inteligente
+- **🔒 Controle de Acesso**: Janela de votação (maioria) para autorizar acesso
 - **🍓 Raspberry Pi Ready**: Preparado para deploy em Raspberry Pi
 - **📊 Logging Avançado**: Sistema completo de logs para monitoramento
 - **🔄 Conexões Simultâneas**: Suporte para múltiplos clientes conectados
@@ -24,7 +24,8 @@ topicosEspeciais/
 ├── 📂 src/
 │   ├── 🖥️  server.py                    # Servidor principal com ThreadPool
 │   ├── 👤 client.py                     # Cliente interativo para testes
-│   ├── 🧠 face_recognition_handler.py   # Lógica de reconhecimento facial
+│   ├── 🧠 face_recognition_handler.py   # Lógica original (usa face_recognition, se disponível)
+│   ├── 🧠 face_recognition_handler_compatible.py   # Modo compatível (OpenCV LBPH)
 │   └── 📹 camera_handler.py             # Gerenciamento da câmera
 ├── 📂 models/                           # Modelos treinados de faces conhecidas
 ├── 📂 data/                             # Dados de treinamento
@@ -81,11 +82,37 @@ python client.py
 ```
 
 O cliente oferece um menu interativo com as seguintes opções:
-1. **🔍 Reconhecer Face**: Captura e analisa faces em tempo real
-2. **📸 Capturar Imagem**: Tira uma foto da câmera
-3. **➕ Adicionar Face Conhecida**: Adiciona nova pessoa ao sistema
-4. **👥 Listar Faces Conhecidas**: Mostra todas as pessoas cadastradas
-5. **🏓 Ping**: Testa conectividade com o servidor
+1. **🔍 Reconhecer Face**: Captura e analisa faces do frame atual
+2. **➕ Adicionar Face Conhecida**: Coleta guiada (6 passos × 3 fotos) ou importa de pasta/arquivo
+3. **👥 Listar Faces Conhecidas**: Mostra todas as pessoas cadastradas
+4. **🏓 Ping**: Testa conectividade com o servidor
+5. **🛠️ Treinar modelo (LBPH)**: Re-treina com as imagens em `data/<nome>/`
+6. **🤖 Reconhecer e identificar (LBPH)**: Predição com limiar configurável
+7. **🧹 Limpar modelo**: Limpa dataset/modelos
+8. **🔐 Autorizar acesso (votação)**: Janela de votação com parâmetros configuráveis
+9. **🚪 Sair**
+
+Notas:
+- A opção “Capturar Imagem” foi removida em favor do fluxo de coleta guiada ou importação por pasta.
+- As imagens coletadas ficam em `data/<nome>/` e os modelos em `models/`.
+
+### 🧭 Coleta Guiada de Dataset
+
+- 6 passos com instruções (frente, esquerda, direita, cima, baixo, expressão)
+- 3 fotos por passo (total 18), salvas em `data/<nome>/`
+- Alternativamente, importe fotos de um diretório com imagens do rosto
+
+### 🤖 Treino e Predição (LBPH)
+
+- Após coletar dados, use “Treinar modelo (LBPH)”
+- A predição utiliza um limiar (`LBPH_THRESHOLD`) para decidir se um rosto conhecido é aceito
+- As imagens de predição são salvas em `captured_images/`
+
+### 🔐 Autorização por Votação (2/3 por padrão)
+
+- Captura N frames (padrão 3) e exige R acertos (padrão 2) abaixo do limiar para permitir
+- Parâmetros configuráveis no cliente: quantidade de frames, votos necessários, limiar
+- Útil para reduzir falsos positivos em ambientes variáveis
 
 ## 🔧 Funcionalidades Técnicas
 
@@ -98,10 +125,9 @@ O cliente oferece um menu interativo com as seguintes opções:
 
 ### 🧠 Reconhecimento Facial
 
-- **Biblioteca Principal**: `face_recognition`
-- **Processamento de Imagem**: `OpenCV`
-- **Algoritmo**: HOG + Linear SVM
-- **Tolerância**: Configurável (padrão: 0.6)
+- Modo compatível com OpenCV (LBPH) ativado por padrão
+- Se `face_recognition` estiver instalado, o handler original pode ser usado
+- Limiar de decisão LBPH configurável via `LBPH_THRESHOLD`
 
 ### 📹 Gerenciamento de Câmera
 
@@ -196,14 +222,32 @@ server = FacialRecognitionServer(
 )
 ```
 
-### ⚙️ Parâmetros de Reconhecimento
+### ⚙️ Configuração via .env (opcional)
 
-```python
-face_handler = FaceRecognitionHandler(
-    models_dir="models",   # Diretório dos modelos
-    tolerance=0.6          # Tolerância (0.0-1.0, menor = mais restritivo)
-)
+Crie um arquivo `.env` na raiz com variáveis (todas possuem defaults):
+
 ```
+SERVER_HOST=localhost
+SERVER_PORT=8888
+MAX_WORKERS=5
+
+# Câmera
+CAMERA_INDEX=0
+CAMERA_WIDTH=640
+CAMERA_HEIGHT=480
+
+# Pastas
+MODELS_DIR=models
+DATA_DIR=data
+LOG_DIR=logs
+
+# LBPH
+LBPH_THRESHOLD=65.0
+```
+
+Observações:
+- LBPH_THRESHOLD menor → mais restritivo (menos falsos positivos, mais falsos negativos)
+- Ajuste conforme iluminação/qualidade das imagens
 
 ### ⚙️ Parâmetros da Câmera
 

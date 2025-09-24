@@ -1,11 +1,11 @@
 # Dependências principais (versões compatíveis com Python 3.13)
-opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
 numpy>=1.24.0
 pillow>=10.0.0
 
 # Face recognition (usando versões mais recentes)
-face-recognition>=1.3.0
-dlib>=19.22.0
+# face-recognition>=1.3.0
+# dlib>=19.22.0
 
 # Utilidades
 python-dotenv>=1.0.0
