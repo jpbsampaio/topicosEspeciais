@@ -1,9 +1,27 @@
 #!/usr/bin/env python3
 """
 Servidor de Reconhecimento Facial
-Implementa arquitetura cliente-servidor com ThreadPool para conexões simultâneas.
+
+Visão geral (o que este arquivo faz):
+- Expõe um servidor TCP que aceita múltiplos clientes simultâneos usando ThreadPoolExecutor.
+- Cada cliente envia e recebe mensagens JSON delimitadas por nova linha ("\n").
+- Faz captura de frames da câmera local e delega reconhecimento/treino ao handler facial.
+
+Como o protocolo funciona:
+- O cliente envia objetos JSON 1-por-linha. Ex.: {"type": "predict"}\n
+- O servidor lê do socket, acumula no buffer até encontrar "\n", faz json.loads e roteia.
+- A resposta é sempre um JSON único terminado por "\n" também.
+
+Handlers usados:
+- CameraHandler: encapsula acesso à webcam (OpenCV) e codificação de frames.
+- FaceRecognitionHandler (compatível): usa OpenCV (LBPH) quando não há dlib/face_recognition.
+
+Por que LBPH?:
+- LBPH (Local Binary Patterns Histograms) é suportado por opencv-contrib e funciona bem em tempo real,
+  especialmente em ambientes sem GPU/dlib. Sua métrica de confiança é "distância": quanto MENOR, melhor.
 """
 
+import cv2
 import socket
 import threading
 import logging
@@ -26,6 +44,10 @@ from config import (
     CAMERA_INDEX,
     camera_resolution,
     LBPH_THRESHOLD,
+    LBPH_STRICT_ENABLE,
+    LBPH_STRICT_THRESHOLD,
+    LBPH_STRICT_MAX_DISTANCE,
+    LBPH_MIN_VOTES_STRICT,
 )
 
 
@@ -50,10 +72,11 @@ class FacialRecognitionServer:
         self.is_running = False
         
         # Handlers especializados
-        self.face_handler = FaceRecognitionHandler()
         if resolution is None:
             resolution = camera_resolution()
         self.camera_handler = CameraHandler(camera_index=camera_index, resolution=resolution)
+        # Handler facial (LBPH apenas)
+        self.face_handler = FaceRecognitionHandler()
         
         # Controle de conexões ativas
         self.active_connections: Dict[str, socket.socket] = {}
@@ -84,6 +107,7 @@ class FacialRecognitionServer:
         """Inicia o servidor e aceita conexões."""
         try:
             # Configuração do socket
+            # AF_INET: IPv4 | SOCK_STREAM: TCP
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.bind((self.host, self.port))
@@ -97,12 +121,14 @@ class FacialRecognitionServer:
             self.logger.info(f"ThreadPool configurado com {self.max_workers} workers")
             
             # Inicializa handlers
+            # Câmera: tenta abrir a webcam e setar resolução/buffer
             ok = self.camera_handler.initialize_camera()
             if not ok:
                 self.logger.error("Falha ao inicializar a câmera. Verifique:")
                 self.logger.error("1) Se outra aplicação está usando a webcam")
                 self.logger.error("2) Configurações do Windows: Privacidade e segurança > Câmera > Permitir acesso para aplicativos desktop")
                 self.logger.error("3) Teste a webcam no aplicativo Câmera do Windows")
+            # Faces: carrega base/modelos persistidos (se houver)
             self.face_handler.load_known_faces()
             
             # Loop principal de aceitação de conexões
@@ -163,6 +189,8 @@ class FacialRecognitionServer:
                     recv_buffer += data
 
                     # Processa todas as mensagens completas (terminadas com \n)
+                    # Importante: o TCP é um stream; uma leitura pode conter múltiplas mensagens ou mensagens parciais.
+                    # Por isso, acumulamos no buffer e dividimos por "\n".
                     while b"\n" in recv_buffer:
                         line, recv_buffer = recv_buffer.split(b"\n", 1)
                         if not line.strip():
@@ -199,7 +227,7 @@ class FacialRecognitionServer:
         Returns:
             Resposta para o cliente
         """
-        message_type = message.get("type", "unknown")
+        message_type = message.get("type", "unknown")  # roteamento por tipo
         
         if message_type == "recognize_face":
             return self._handle_face_recognition()
@@ -225,7 +253,63 @@ class FacialRecognitionServer:
             return self._handle_collect_dataset(message)
 
         elif message_type == "authorize_access":
-            return self._handle_authorize_access(message)
+            count = int(message.get("count", 3))
+            required = int(message.get("required", 2))
+            threshold = float(message.get("threshold", LBPH_THRESHOLD))
+            # (opcional) whitelist futura: allowed = set(message.get("allowed", []))
+
+            frame_results = []
+            vote_counter: dict[str, int] = {}
+
+            for i in range(count):
+                frame = self.camera_handler.capture_frame()
+                if frame is None:
+                    frame_results.append({"error": "frame_fail"})
+                    continue
+                preds = self.face_handler.predict(frame)
+                # Ajustar threshold em tempo de execução (ex: override local)
+                for p in preds:
+                    # Se veio sem confidence (modelo não treinado) ou acima do limiar => ignora
+                    if p.get("confidence") is None:
+                        continue
+                    if p["name"] == "Desconhecido":
+                        continue
+                    # Voto só conta se o nome reconhecido passou pelo limiar no handler
+                    vote_counter[p["name"]] = vote_counter.get(p["name"], 0) + 1
+                frame_results.append({"predictions": preds})
+
+            # Decide vencedor
+            granted = False
+            best_name = None
+            best_votes = 0
+            if vote_counter:
+                best_name, best_votes = max(vote_counter.items(), key=lambda kv: kv[1])
+                if best_votes >= required:
+                    granted = True
+
+            # Se ninguém reconhecido (ou não atingiu votos), acesso negado
+            response = {
+                "type": "access_decision",
+                "granted": granted,
+                "name": best_name if granted else None,
+                "votes": best_votes,
+                "required": required,
+                "count": count,
+                "threshold": threshold,
+                "tallies": vote_counter,
+                "frames": frame_results,
+            }
+
+            # Snapshot opcional (último frame válido)
+            if frame is not None:
+                try:
+                    ok, jpg = cv2.imencode(".jpg", frame)
+                    if ok:
+                        response["image_data"] = base64.b64encode(jpg.tobytes()).decode("ascii")
+                except Exception:
+                    pass
+
+            return response
 
         elif message_type == "ping":
             return {
@@ -253,6 +337,7 @@ class FacialRecognitionServer:
                 }
                 
             # Executa reconhecimento
+            # Nota: com LBPH treinado → prediz identidade; sem LBPH → somente detecção
             result = self.face_handler.recognize_faces(frame)
             
             # Codifica imagem para envio (opcional)
@@ -287,7 +372,7 @@ class FacialRecognitionServer:
 
             saved = 0
             attempts = 0
-            max_attempts = count * 3  # tolera algumas falhas de detecção
+            max_attempts = count * 3  # tolera algumas falhas de detecção (sem travar o fluxo)
 
             while saved < count and attempts < max_attempts:
                 attempts += 1
@@ -296,6 +381,7 @@ class FacialRecognitionServer:
                     time.sleep(0.05)
                     continue
                 # Reaproveita pipeline existente: encode -> base64 -> add_known_face
+                # Isso mantém o mesmo caminho de código que o envio de arquivos pelo cliente.
                 ok, buf = self.camera_handler.encode_frame(frame)
                 if not ok:
                     continue
@@ -374,6 +460,7 @@ class FacialRecognitionServer:
             success = False
             if hasattr(self.face_handler, 'train_model'):
                 success = self.face_handler.train_model()
+            # Também computamos estatísticas do dataset para feedback ao usuário
             dataset_counts, total_images = self._dataset_counts()
             return {
                 "type": "model_trained",
@@ -420,17 +507,30 @@ class FacialRecognitionServer:
                 }
 
             if hasattr(self.face_handler, 'predict'):
-                result = self.face_handler.predict(frame)
+                result = self.face_handler.predict(frame)  # lista de dicts
             else:
+                # Fallback teórico (não deve ocorrer mais)
                 result = self.face_handler.recognize_faces(frame)
 
             _, buffer = self.camera_handler.encode_frame(frame)
             image_data = base64.b64encode(buffer).decode('utf-8')
-
+            if isinstance(result, list):
+                recognized_faces = [p.get("name", "Desconhecido") for p in result]
+                confidence_scores = [p.get("confidence") for p in result]
+                return {
+                    "type": "prediction_result",
+                    "recognized_faces": recognized_faces,
+                    "confidence_scores": confidence_scores,
+                    "raw": result,
+                    "image_data": image_data,
+                    "timestamp": time.time()
+                }
+            # Compat se ainda for dict (estrutura antiga)
             return {
                 "type": "prediction_result",
                 "recognized_faces": result.get("faces", []),
                 "confidence_scores": result.get("confidence", []),
+                "raw": result,
                 "image_data": image_data,
                 "timestamp": time.time()
             }
@@ -454,76 +554,84 @@ class FacialRecognitionServer:
             count = int(message.get("count", 3))
             required = int(message.get("required", 2))
             threshold = float(message.get("threshold", LBPH_THRESHOLD))
-            if count <= 0 or required <= 0 or required > count:
-                return {"type": "error", "message": "Parâmetros inválidos (count/required)", "timestamp": time.time()}
+            # (opcional) whitelist futura: allowed = set(message.get("allowed", []))
 
-            tallies: Dict[str, int] = {}
-            frames_details = []
-            last_image_b64 = None
+            effective_threshold = threshold if threshold is not None else self.face_handler.lbph_threshold
+            frame_results = []
+            vote_counter: dict[str, int] = {}
+            last_frame = None
+            # Para métricas de distância por identidade
+            distance_tracker: dict[str, list[float]] = {}
 
             for i in range(count):
                 frame = self.camera_handler.capture_frame()
+                last_frame = frame if frame is not None else last_frame
                 if frame is None:
-                    frames_details.append({"error": "Falha captura"})
-                    time.sleep(0.1)
+                    frame_results.append({"error": "frame_fail"})
                     continue
-
-                # Executa predição
-                if hasattr(self.face_handler, 'predict'):
-                    result = self.face_handler.predict(frame)
-                else:
-                    result = self.face_handler.recognize_faces(frame)
-
-                faces = result.get("faces", [])
-                confs = result.get("confidence", [])
-                accepted_this_frame = []
-
-                # Considera apenas rótulos conhecidos com confiança abaixo do limiar
-                for idx, name in enumerate(faces):
-                    if not name or name == "Desconhecido":
+                preds = self.face_handler.predict(frame)
+                for p in preds:
+                    if p.get("name") == "Desconhecido":
                         continue
-                    conf = None
-                    if idx < len(confs):
-                        try:
-                            conf = float(confs[idx])
-                        except Exception:
-                            conf = None
-                    if conf is not None and conf <= threshold:
-                        tallies[name] = tallies.get(name, 0) + 1
-                        accepted_this_frame.append({"name": name, "confidence": conf})
+                    dist = p.get("distance") or p.get("confidence")
+                    if dist is None:
+                        continue  # modelo não treinado
+                    if dist > effective_threshold:
+                        continue  # rejeita acima do limiar principal
+                    name = p["name"]
+                    vote_counter[name] = vote_counter.get(name, 0) + 1
+                    distance_tracker.setdefault(name, []).append(dist)
+                frame_results.append({"predictions": preds})
 
-                # Codifica último frame para retorno
-                _, buffer = self.camera_handler.encode_frame(frame)
-                last_image_b64 = base64.b64encode(buffer).decode('utf-8')
+            granted = False
+            best_name = None
+            best_votes = 0
+            if vote_counter:
+                best_name, best_votes = max(vote_counter.items(), key=lambda kv: kv[1])
+                if best_votes >= required:
+                    granted = True
 
-                frames_details.append({
-                    "faces": faces,
-                    "confidences": confs,
-                    "accepted": accepted_this_frame,
-                })
+            strict_info = None
+            if granted and LBPH_STRICT_ENABLE and best_name in distance_tracker:
+                dists = distance_tracker[best_name]
+                avg_dist = sum(dists) / len(dists)
+                max_dist = max(dists)
+                strict_info = {
+                    "avg_distance": avg_dist,
+                    "max_distance": max_dist,
+                    "count_samples": len(dists),
+                    "strict_threshold": LBPH_STRICT_THRESHOLD,
+                    "strict_max_distance": LBPH_STRICT_MAX_DISTANCE,
+                }
+                # Aplicar regras estritas: média e máximo devem estar abaixo dos limiares
+                if avg_dist > LBPH_STRICT_THRESHOLD or max_dist > LBPH_STRICT_MAX_DISTANCE:
+                    granted = False
+                # Também podemos exigir um número mínimo de votos em modo estrito
+                elif best_votes < max(required, LBPH_MIN_VOTES_STRICT):
+                    granted = False
 
-                time.sleep(0.15)
-
-            # Decide vencedor
-            winner = None
-            votes = 0
-            if tallies:
-                winner, votes = max(tallies.items(), key=lambda kv: kv[1])
-            granted = bool(winner and votes >= required)
-
-            return {
+            response = {
                 "type": "access_decision",
                 "granted": granted,
-                "name": winner,
-                "votes": votes,
+                "name": best_name if granted else None,
+                "votes": best_votes,
                 "required": required,
                 "count": count,
-                "threshold": threshold,
-                "tallies": tallies,
-                "frames": frames_details,
-                "image_data": last_image_b64,
-                "timestamp": time.time(),
+                "threshold": effective_threshold,
+                "tallies": vote_counter,
+                "frames": frame_results,
+                "strict": strict_info,
             }
+
+            if last_frame is not None:
+                try:
+                    ok, jpg = cv2.imencode(".jpg", last_frame)
+                    if ok:
+                        response["image_data"] = base64.b64encode(jpg.tobytes()).decode("ascii")
+                except Exception:
+                    pass
+
+            return response
         except Exception as e:
             self.logger.error(f"Erro em authorize_access: {e}")
             return {

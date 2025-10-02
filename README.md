@@ -1,68 +1,64 @@
+# (Existing README replaced by lean version)
+## Sistema de Reconhecimento Facial (Versão Enxuta)
+
+Projeto reduzido para o essencial: servidor + cliente TCP, captura de câmera e reconhecimento facial usando somente OpenCV (LBPH).
+### Estrutura Mantida
+```
+src/
+    server.py                # Servidor TCP (JSON por linha) + roteamento
+    client.py                # Cliente interativo (menu)
+    camera_handler.py        # Abstração da câmera (captura e encode JPEG)
+    face_recognition_handler_compatible.py  # Handler LBPH (OpenCV)
+    config.py                # Configurações centrais
+models/                    # Modelo LBPH e labels
+data/                      # Dataset organizado por pessoa (data/<nome>/*.jpg)
+logs/                      # Logs do servidor/cliente
+captured_images/           # Snapshots salvos pelo cliente (predict / autorização)
+### Dependências
+Instale apenas:
+```
+pip install -r requirements.txt
+```
+
+### Uso Rápido
+1. Inicie o servidor:
+```
+python src/server.py
+2. Em outro terminal, inicie o cliente:
+```
+python src/client.py
+3. No cliente:
+    - Opção 2: adicionar face (coleta guiada ou pasta)
+    - Opção 5: treinar modelo (gera/atualiza `models/opencv_lbph.xml`)
+    - Opção 6: identificar (usa LBPH)
+    - Opção 8: votação de autorização (N frames, K votos)
+
+### Dataset
+Imagens ficam em `data/<nome>/*.jpg` (tons de cinza recortados). Quanto mais variedade (ângulos/iluminação), melhor.
+
+### Limiar LBPH
+O valor usado para aceitar predição é configurado em `config.py` (LBPH_THRESHOLD). Distâncias menores indicam melhor correspondência.
+
+### Limpeza Realizada
+Removidos:
+- Handlers redundantes (`face_recognition_handler.py`, `opencv_face_handler.py`)
+- Scripts de exemplo e testes (`demo.py`, `quick_test.py`, `setup_example.py`)
+- Arquivos de status/documentação intermediária (`STATUS.md`)
+
+### Próximos Passos (Opcional)
+- Adicionar `.env` para configurar host/porta/câmera sem editar código.
+- Criar testes unitários mínimos para o handler LBPH.
+- Adicionar persistência de métricas ou API REST (futuro).
+
+---
+Projeto minimalista pronto para extensão ou deploy.
 # 🔐 Sistema de Reconhecimento Facial com Arquitetura Cliente-Servidor
 
 Sistema avançado de reconhecimento facial desenvolvido em Python com arquitetura cliente-servidor usando sockets TCP e ThreadPool para gerenciamento eficiente de múltiplas conexões simultâneas.
 
 ## 🎯 Objetivo
 
-Desenvolver um sistema de controle de acesso baseado em reconhecimento facial, preparado para integração com Raspberry Pi e controle de fechaduras eletrônicas.
-
-## ✨ Características Principais
-
-- **🔧 Arquitetura Cliente-Servidor**: Comunicação via sockets TCP
-- **⚡ ThreadPool**: Gerenciamento eficiente de conexões simultâneas
-- **🧠 Reconhecimento Facial**: Caminho compatível usando OpenCV (LBPH); usa `face_recognition` se disponível
-- **📹 Captura de Vídeo**: Suporte para câmera do PC e webcam
-- **🔒 Controle de Acesso**: Janela de votação (maioria) para autorizar acesso
-- **🍓 Raspberry Pi Ready**: Preparado para deploy em Raspberry Pi
-- **📊 Logging Avançado**: Sistema completo de logs para monitoramento
-- **🔄 Conexões Simultâneas**: Suporte para múltiplos clientes conectados
-
-## 📁 Estrutura do Projeto
-
-```
-topicosEspeciais/
-├── 📂 src/
-│   ├── 🖥️  server.py                    # Servidor principal com ThreadPool
-│   ├── 👤 client.py                     # Cliente interativo para testes
-│   ├── 🧠 face_recognition_handler.py   # Lógica original (usa face_recognition, se disponível)
-│   ├── 🧠 face_recognition_handler_compatible.py   # Modo compatível (OpenCV LBPH)
-│   └── 📹 camera_handler.py             # Gerenciamento da câmera
-├── 📂 models/                           # Modelos treinados de faces conhecidas
-├── 📂 data/                             # Dados de treinamento
-├── 📂 training_images/                  # Imagens para adicionar faces conhecidas
-├── 📂 captured_images/                  # Imagens capturadas pelo sistema
-├── 📂 logs/                             # Arquivos de log do sistema
-├── 📂 .github/
-│   └── 📝 copilot-instructions.md       # Instruções para o GitHub Copilot
-├── 📋 requirements.txt                  # Dependências do projeto
-├── 🧪 setup_example.py                  # Script de configuração e testes
-└── 📖 README.md                         # Este arquivo
-```
-
-## 🚀 Instalação e Configuração
-
-### 1. 📦 Instalar Dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. 🧪 Executar Testes de Configuração
-
-```bash
-python setup_example.py
-```
-
-### 3. 📹 Testar Câmera
-
-```bash
-# Execute o script de configuração e escolha a opção de teste da câmera
-python setup_example.py
-```
-
-## 🎮 Como Usar
-
-### 🖥️ Executar o Servidor
+## (Seção removida – documentação antiga substituída pela versão enxuta no início do arquivo)
 
 ```bash
 cd src

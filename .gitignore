@@ -111,3 +111,8 @@ Thumbs.db
 # Arquivos de configuração local
 config.local.json
 settings.local.json
+
+# Diretórios de imagens do projeto
+.captured_images
+.data
+.data/*

@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
 Handler para Gerenciamento da Câmera
-Módulo responsável pela captura e processamento de vídeo da câmera.
+
+Responsabilidades principais:
+- Abrir/fechar a câmera (OpenCV VideoCapture) e configurar resolução.
+- Capturar frames sob demanda (capture_frame) ou continuamente em uma thread separada.
+- Manter um buffer (queue) com poucos frames recentes para reduzir latência.
+- Codificar frames (JPEG/PNG) para transmissão via socket.
+
+Por que usar queue e locks?
+- A captura contínua roda em outra thread para não bloquear as requisições do servidor.
+- Usamos uma Queue pequena (maxsize=5) para evitar atraso (latência) — descartamos frames antigos.
+- Um Lock protege o frame atual durante leitura/gravação entre threads.
 """
 
 import cv2
@@ -32,7 +42,7 @@ class CameraHandler:
         
         # Threading para captura contínua
         self.capture_thread: Optional[threading.Thread] = None
-        self.frame_queue = queue.Queue(maxsize=5)
+        self.frame_queue = queue.Queue(maxsize=5)  # buffer curto = menor latência
         self.stop_capture = threading.Event()
         
         # Frame atual
@@ -68,7 +78,7 @@ class CameraHandler:
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
             
-            # Configura buffer para reduzir latência
+            # Configura buffer interno do OpenCV para reduzir latência
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             # Testa captura
@@ -129,7 +139,7 @@ class CameraHandler:
         """Loop principal de captura (executa em thread separada)."""
         self.logger.info("Iniciando loop de captura")
         
-        while not self.stop_capture.is_set():
+        while not self.stop_capture.is_set():  # loop até receber sinal de parada
             try:
                 if not self.cap or not self.cap.isOpened():
                     self.logger.error("Câmera não disponível no loop de captura")
@@ -142,7 +152,7 @@ class CameraHandler:
                     with self.frame_lock:
                         self.current_frame = frame.copy()
                         
-                    # Adiciona à queue (remove frame antigo se cheia)
+                    # Adiciona à queue (se cheia, remove o mais antigo para manter buffer curto)
                     try:
                         self.frame_queue.put(frame, block=False)
                     except queue.Full:

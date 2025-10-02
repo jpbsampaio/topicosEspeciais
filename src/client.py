@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
 Cliente para Teste do Sistema de Reconhecimento Facial
-Cliente interativo para comunicação com o servidor de reconhecimento facial.
+
+O que este cliente faz:
+- Conecta ao servidor TCP de reconhecimento facial.
+- Envia mensagens JSON, uma por linha (terminadas com "\n").
+- Recebe mensagens do servidor em uma thread dedicada e exibe resultados.
+
+Por que usar linha delimitada por "\n"?
+- TCP entrega um stream contínuo (pode agrupar mensagens ou fracioná-las).
+- Ao delimitar por "\n", garantimos que o receptor sabe onde a mensagem termina.
 """
 
 import socket
@@ -121,6 +129,7 @@ class FacialRecognitionClient:
                 recv_buffer += data
 
                 # Processa todas as mensagens completas (terminadas com \n)
+                # Mesma lógica do servidor: acumulamos bytes até encontrar "\n".
                 while b"\n" in recv_buffer:
                     line, recv_buffer = recv_buffer.split(b"\n", 1)
                     if not line.strip():

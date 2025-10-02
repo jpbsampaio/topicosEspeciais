@@ -34,7 +34,15 @@ DATA_DIR: str = os.getenv("DATA_DIR", "data")
 LOG_DIR: str = os.getenv("LOG_DIR", "logs")
 
 # Reconhecimento (LBPH)
-LBPH_THRESHOLD: float = float(os.getenv("LBPH_THRESHOLD", "70.0"))
+LBPH_THRESHOLD: float = float(os.getenv("LBPH_THRESHOLD", "55"))
+
+# Modo estrito (verificação adicional para reduzir falsos positivos)
+# Se habilitado, a autorização só é concedida se a média das distâncias dos frames
+# reconhecidos ficar abaixo de um limiar mais severo.
+LBPH_STRICT_ENABLE: bool = os.getenv("LBPH_STRICT_ENABLE", "true").lower() in ("1", "true", "yes", "on")
+LBPH_STRICT_THRESHOLD: float = float(os.getenv("LBPH_STRICT_THRESHOLD", str(max(1, int(LBPH_THRESHOLD * 0.8)))))
+LBPH_STRICT_MAX_DISTANCE: float = float(os.getenv("LBPH_STRICT_MAX_DISTANCE", str(int(LBPH_THRESHOLD * 0.9))))
+LBPH_MIN_VOTES_STRICT: int = int(os.getenv("LBPH_MIN_VOTES_STRICT", "2"))
 
 
 def camera_resolution() -> Tuple[int, int]:
