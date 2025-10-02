@@ -1,4 +1,3 @@
-# (Existing README replaced by lean version)
 ## Sistema de Reconhecimento Facial (Versão Enxuta)
 
 Projeto reduzido para o essencial: servidor + cliente TCP, captura de câmera e reconhecimento facial usando somente OpenCV (LBPH).
