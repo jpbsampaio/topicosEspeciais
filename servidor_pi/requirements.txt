@@ -1,0 +1,8 @@
+Flask
+gunicorn
+Flask-JWT-Extended
+Flask-Bcrypt
+deepface
+opencv-python
+numpy
+# 'deepface' instalara automaticamente tensorflow, keras, etc. [46]
