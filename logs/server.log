@@ -1,0 +1,133 @@
+2025-09-25 19:52:09,001 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 19:52:09,002 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 19:52:09,002 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 19:52:10,187 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 19:52:10,187 - __main__ - ERROR - Erro ao iniciar servidor: 'FaceRecognitionHandler' object has no attribute 'load_known_faces'
+2025-09-25 19:52:10,187 - __main__ - INFO - Iniciando shutdown do servidor...
+2025-09-25 19:52:10,187 - __main__ - INFO - ThreadPool encerrado
+2025-09-25 19:52:10,188 - __main__ - INFO - Socket do servidor fechado
+2025-09-25 19:52:10,188 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 19:52:10,462 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 19:52:10,462 - __main__ - INFO - Shutdown completado
+2025-09-25 19:52:10,462 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 19:52:10,462 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 19:54:03,254 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 19:54:03,254 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 19:54:03,254 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 19:54:04,322 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 19:54:04,322 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:09:03,622 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:09:03,623 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:09:03,623 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:09:04,925 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:09:04,925 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:09:45,910 - __main__ - INFO - Nova conexão de ('127.0.0.1', 65314)
+2025-09-25 20:09:45,911 - __main__ - INFO - Iniciando atendimento ao cliente 127.0.0.1:65314
+2025-09-25 20:10:05,960 - __main__ - ERROR - Erro na coleta de dataset: 'FaceRecognitionHandler' object has no attribute 'add_known_face'
+2025-09-25 20:10:41,201 - __main__ - INFO - Cliente 127.0.0.1:65314 desconectado
+2025-09-25 20:10:41,202 - __main__ - INFO - Limpeza da conexão 127.0.0.1:65314 completada
+2025-09-25 20:10:59,229 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:10:59,229 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:10:59,229 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:10:59,543 - camera_handler - ERROR - Falha ao capturar frame de teste
+2025-09-25 20:10:59,543 - __main__ - ERROR - Falha ao inicializar a câmera. Verifique:
+2025-09-25 20:10:59,543 - __main__ - ERROR - 1) Se outra aplicação está usando a webcam
+2025-09-25 20:10:59,543 - __main__ - ERROR - 2) Configurações do Windows: Privacidade e segurança > Câmera > Permitir acesso para aplicativos desktop
+2025-09-25 20:10:59,543 - __main__ - ERROR - 3) Teste a webcam no aplicativo Câmera do Windows
+2025-09-25 20:10:59,543 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:17:20,891 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:17:20,891 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:17:20,891 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:17:21,915 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:17:21,915 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:18:23,531 - __main__ - INFO - Iniciando shutdown do servidor...
+2025-09-25 20:18:23,531 - __main__ - INFO - ThreadPool encerrado
+2025-09-25 20:18:23,531 - __main__ - INFO - Socket do servidor fechado
+2025-09-25 20:18:23,531 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 20:18:23,796 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 20:18:23,796 - __main__ - INFO - Shutdown completado
+2025-09-25 20:18:23,796 - __main__ - INFO - Iniciando shutdown do servidor...
+2025-09-25 20:18:23,796 - __main__ - INFO - ThreadPool encerrado
+2025-09-25 20:18:23,796 - __main__ - INFO - Socket do servidor fechado
+2025-09-25 20:18:23,796 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 20:18:23,796 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 20:18:23,797 - __main__ - INFO - Shutdown completado
+2025-09-25 20:18:23,797 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 20:18:23,797 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 20:19:32,742 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:19:32,742 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:19:32,742 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:19:33,962 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:19:33,962 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:22:23,536 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:22:23,537 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:22:23,537 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:22:24,742 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:22:24,742 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:22:39,492 - __main__ - INFO - Nova conexão de ('127.0.0.1', 49299)
+2025-09-25 20:22:39,492 - __main__ - INFO - Iniciando atendimento ao cliente 127.0.0.1:49299
+2025-09-25 20:23:26,819 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:23:42,863 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:23:54,880 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:24:02,887 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:24:12,141 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:24:22,081 - __main__ - ERROR - Erro ao atender cliente 127.0.0.1:49299: [WinError 10054] Foi forçado o cancelamento de uma conexão existente pelo host remoto
+2025-09-25 20:24:22,081 - __main__ - INFO - Cliente 127.0.0.1:49299 desconectado
+2025-09-25 20:24:22,081 - __main__ - INFO - Limpeza da conexão 127.0.0.1:49299 completada
+2025-09-25 20:25:01,928 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:25:01,928 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:25:01,928 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:25:03,197 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:25:03,197 - face_recognition_handler - INFO - Nenhuma base de dados encontrada, criando nova
+2025-09-25 20:25:27,989 - __main__ - INFO - Nova conexão de ('127.0.0.1', 49332)
+2025-09-25 20:25:27,990 - __main__ - INFO - Iniciando atendimento ao cliente 127.0.0.1:49332
+2025-09-25 20:25:39,556 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:39,556 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:39,776 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:39,776 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:40,000 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:40,001 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:52,479 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:52,479 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:52,702 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:52,702 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:52,923 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:52,923 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:54,498 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:54,498 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:54,730 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:54,730 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:54,956 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:54,956 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:56,348 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:56,348 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:56,575 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:56,576 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:56,804 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:56,805 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:58,274 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:58,274 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:58,488 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:58,489 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:25:58,711 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:25:58,711 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:26:00,270 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:26:00,270 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:26:00,486 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:26:00,486 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:26:00,702 - face_recognition_handler - INFO - Base de dados salva
+2025-09-25 20:26:00,702 - face_recognition_handler - INFO - Face adicionada (modo simples): joao
+2025-09-25 20:26:28,579 - __main__ - ERROR - Erro no reconhecimento facial: 'FaceRecognitionHandler' object has no attribute 'recognize_faces'
+2025-09-25 20:32:29,064 - __main__ - INFO - Servidor iniciado em localhost:8888
+2025-09-25 20:32:29,064 - __main__ - INFO - ThreadPool configurado com 5 workers
+2025-09-25 20:32:29,064 - camera_handler - INFO - Inicializando câmera 0
+2025-09-25 20:32:30,278 - camera_handler - INFO - Câmera inicializada com resolução 640x480
+2025-09-25 20:32:30,278 - __main__ - ERROR - Erro ao iniciar servidor: 'FaceRecognitionHandler' object has no attribute 'load_faces_database'
+2025-09-25 20:32:30,278 - __main__ - INFO - Iniciando shutdown do servidor...
+2025-09-25 20:32:30,278 - __main__ - INFO - ThreadPool encerrado
+2025-09-25 20:32:30,278 - __main__ - INFO - Socket do servidor fechado
+2025-09-25 20:32:30,278 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 20:32:30,561 - camera_handler - INFO - Recursos da câmera liberados
+2025-09-25 20:32:30,562 - __main__ - INFO - Shutdown completado
+2025-09-25 20:32:30,563 - camera_handler - INFO - Limpando recursos da câmera
+2025-09-25 20:32:30,563 - camera_handler - INFO - Recursos da câmera liberados

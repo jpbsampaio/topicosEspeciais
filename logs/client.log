@@ -1,0 +1,17 @@
+2025-09-25 20:09:45,906 - __main__ - INFO - Conectando ao servidor localhost:8888
+2025-09-25 20:09:45,911 - __main__ - INFO - Conectado ao servidor com sucesso
+2025-09-25 20:10:39,193 - __main__ - INFO - Desconectando do servidor
+2025-09-25 20:10:41,202 - __main__ - INFO - Desconectado do servidor
+2025-09-25 20:21:48,675 - __main__ - INFO - Conectando ao servidor localhost:8888
+2025-09-25 20:21:50,721 - __main__ - ERROR - Erro ao conectar: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente
+2025-09-25 20:21:50,721 - __main__ - INFO - Desconectando do servidor
+2025-09-25 20:21:50,722 - __main__ - INFO - Desconectado do servidor
+2025-09-25 20:22:05,859 - __main__ - INFO - Conectando ao servidor localhost:8888
+2025-09-25 20:22:07,916 - __main__ - ERROR - Erro ao conectar: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente
+2025-09-25 20:22:07,917 - __main__ - INFO - Desconectando do servidor
+2025-09-25 20:22:07,917 - __main__ - INFO - Desconectado do servidor
+2025-09-25 20:22:39,488 - __main__ - INFO - Conectando ao servidor localhost:8888
+2025-09-25 20:22:39,519 - __main__ - INFO - Conectado ao servidor com sucesso
+2025-09-25 20:25:27,984 - __main__ - INFO - Conectando ao servidor localhost:8888
+2025-09-25 20:25:28,010 - __main__ - INFO - Conectado ao servidor com sucesso
+2025-09-25 20:31:27,574 - __main__ - ERROR - Erro ao receber mensagem: [WinError 10054] Foi forçado o cancelamento de uma conexão existente pelo host remoto
