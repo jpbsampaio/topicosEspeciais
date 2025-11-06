@@ -12,7 +12,6 @@ def get_db_connection():
 
 def init_db():
     """Inicializa o esquema do banco de dados."""
-    # CORREÇÃO: A variável estava vazia. Definido o esquema SQL.
     sql_statements = [
         """
         CREATE TABLE IF NOT EXISTS admins (
@@ -77,8 +76,6 @@ def add_user(name):
 
 def add_face_encoding(user_id, encoding_vector):
     """Adiciona um encoding facial (vetor numpy) para um usuário."""
-    # Converte o vetor numpy para bytes (BLOB)
-    # CORREÇÃO: Padronizando para float32
     encoding_blob = encoding_vector.astype(np.float32).tobytes()
     with get_db_connection() as conn:
         conn.execute(
@@ -105,18 +102,14 @@ def get_all_encodings():
     Retorna uma lista de tuplas: (user_id, name, encoding_vector)
     """
     with get_db_connection() as conn:
-        # CORREÇÃO: O JOIN estava errado, "u.user_id" não existe, o correto é "u.id"
         rows = conn.execute("""
             SELECT u.id, u.name, fe.encoding
             FROM face_encodings fe
             JOIN users u ON u.id = fe.user_id
         """).fetchall()
 
-        # CORREÇÃO: A lista estava sendo inicializada vazia (SyntaxError)
         encodings_list = []
         for row in rows:
-            # Converte o BLOB de volta para um vetor numpy
-            # CORREÇÃO: Garantindo que o dtype seja float32 (para bater com o save)
             encoding_vector = np.frombuffer(row['encoding'], dtype=np.float32)
             encodings_list.append({
                 "user_id": row['id'],
