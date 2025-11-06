@@ -1,15 +1,9 @@
-# cliente_admin/admin.py
 import requests
 import cv2
-import getpass # Para esconder a senha
+import getpass
 
-# --- Configuracao ---
-# CORREÇÃO: 127.0.0.1 é localhost. Para funcionar em outra máquina,
-# você DEVE colocar o IP real do seu Raspberry Pi na rede.
 BASE_URL = "http://<IP_DO_SEU_RASPBERRY_PI>:5000" 
-AUTH_TOKEN = None # RF-A03: Armazena o token em memoria
-
-# --- Funcoes de Helper da API ---
+AUTH_TOKEN = None
 
 def login():
     """RF-A01, RF-A02: Solicita login e armazena o token."""
@@ -54,7 +48,6 @@ def capture_image_from_cam():
         if not ret:
             break
             
-        # Exibe instrucoes no video
         cv2.putText(frame, "Pressione ESPACO para capturar", (30, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         cv2.imshow('Capturar Foto Admin', frame)
@@ -89,7 +82,6 @@ def add_user():
         
     print("Foto capturada. Enviando para o servidor...")
     
-    # Codifica a imagem para JPEG em memoria
     ret, img_encoded = cv2.imencode('.jpg', image_frame)
     if not ret:
         print("Erro ao codificar imagem.")
@@ -99,7 +91,6 @@ def add_user():
         headers = get_auth_headers()
         url = f"{BASE_URL}/admin/users/add"
         
-        # Prepara o payload multipart/form-data
         files = {'image': ('user.jpg', img_encoded.tobytes(), 'image/jpeg')}
         data = {'name': name}
         
@@ -108,7 +99,6 @@ def add_user():
         if response.status_code == 201:
             print(f"Sucesso! Usuario '{name}' adicionado com ID: {response.json()['user_id']}")
         else:
-            # RNF-04 é tratado aqui (RNF-05 no server)
             print(f"Erro do servidor: {response.json().get('error', 'Erro')}") 
             
     except Exception as e:
@@ -163,7 +153,7 @@ def delete_user():
 def main():
     """Loop principal do menu."""
     if not login():
-        return # Encerra se o login falhar
+        return
         
     while True:
         print("\n--- Menu do Cliente Admin ---")
