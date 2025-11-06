@@ -1,4 +1,3 @@
-# servidor_pi/auth_utils.py
 import bcrypt
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
@@ -17,16 +16,3 @@ def check_password(password, hashed_password):
     password_bytes = password.encode('utf-8')
     hashed_bytes = hashed_password.encode('utf-8')
     return bcrypt.checkpw(password_bytes, hashed_bytes)
-
-# Funções de token (são importadas diretamente do flask_jwt_extended,
-# mas são listadas aqui para clareza conceitual)
-#
-# create_access_token(identity)
-#   - Usado no endpoint de login para criar um novo token.
-#
-# @jwt_required()
-#   - Um decorador usado nos endpoints protegidos.
-#
-# get_jwt_identity()
-#   - (Opcional) Usado dentro de um endpoint protegido para
-#     descobrir quem é o usuário logado.
