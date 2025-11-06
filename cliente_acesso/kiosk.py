@@ -2,7 +2,8 @@ import requests
 import cv2
 import numpy as np
 
-BASE_URL = "http://<IP_DO_SEU_RASPBERRY_PI>:5000" 
+# IP do rasp
+BASE_URL = "http://192.168.15.5:5000" 
 VERIFY_URL = f"{BASE_URL}/verify"
 DISPLAY_TIME_MS = 5000
 
