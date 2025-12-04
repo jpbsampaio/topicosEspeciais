@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Backups - Sistema de Controle de Acesso{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-2">
+    <h1>💾 Gerenciar Backups</h1>
+    <div class="flex gap-1">
+        <form action="{{ url_for('web_create_backup') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-primary">+ Criar Backup Manual</button>
+        </form>
+    </div>
+</div>
+
+<!-- Status do Backup -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-value">{{ status.total_backups }}</div>
+        <div class="stat-label">Total de Backups</div>
+    </div>
+    <div class="stat-card {% if status.auto_backup_running %}success{% else %}warning{% endif %}">
+        <div class="stat-value">{% if status.auto_backup_running %}ON{% else %}OFF{% endif %}</div>
+        <div class="stat-label">Backup Automático</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ status.interval_hours }}h</div>
+        <div class="stat-label">Intervalo</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ status.max_backups }}</div>
+        <div class="stat-label">Máx. Backups</div>
+    </div>
+</div>
+
+<!-- Controle do Backup Automático -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">⚙️ Backup Automático</h3>
+    </div>
+    <div class="card-body">
+        <div class="flex items-center gap-2">
+            <p style="flex: 1;">
+                {% if status.auto_backup_running %}
+                <span class="badge badge-success">Ativo</span>
+                O sistema está criando backups automaticamente a cada <strong>{{ status.interval_hours }} horas</strong>.
+                {% else %}
+                <span class="badge badge-warning">Inativo</span>
+                O backup automático está desativado. Ative para proteger seus dados.
+                {% endif %}
+            </p>
+            {% if status.auto_backup_running %}
+            <form action="{{ url_for('web_toggle_auto_backup') }}" method="POST">
+                <input type="hidden" name="action" value="stop">
+                <button type="submit" class="btn btn-warning">Desativar</button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('web_toggle_auto_backup') }}" method="POST">
+                <input type="hidden" name="action" value="start">
+                <button type="submit" class="btn btn-success">Ativar</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Backups -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📁 Backups Disponíveis</h3>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Data</th>
+                    <th>Tamanho</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr>
+                    <td><code>{{ backup.name }}</code></td>
+                    <td>
+                        {% if backup.type == 'manual' %}
+                        <span class="badge badge-primary" style="background: #dbeafe; color: #1e40af;">Manual</span>
+                        {% else %}
+                        <span class="badge badge-success">Automático</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ backup.timestamp }}</td>
+                    <td>{{ backup.size_mb }} MB</td>
+                    <td class="text-right">
+                        <form action="{{ url_for('web_restore_backup') }}" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza? Isso substituirá os dados atuais.');">
+                            <input type="hidden" name="backup_name" value="{{ backup.name }}">
+                            <button type="submit" class="btn btn-warning">Restaurar</button>
+                        </form>
+                        <form action="{{ url_for('web_delete_backup') }}" method="POST" style="display: inline;" onsubmit="return confirm('Excluir este backup permanentemente?');">
+                            <input type="hidden" name="backup_name" value="{{ backup.name }}">
+                            <button type="submit" class="btn btn-danger">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            Nenhum backup disponível.<br>
+            <small>Clique em "Criar Backup Manual" para criar o primeiro backup.</small>
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info sobre backups -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">ℹ️ Informações</h3>
+    </div>
+    <div class="card-body">
+        <ul>
+            <li><strong>Diretório de backups:</strong> <code>{{ status.backup_dir }}</code></li>
+            <li><strong>Arquivos incluídos:</strong> database.db, lbph_model.yml, labels.pkl</li>
+            <li><strong>Retenção:</strong> Os {{ status.max_backups }} backups mais recentes são mantidos</li>
+            <li><strong>Dica:</strong> Faça backup manual antes de alterações importantes</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -1,54 +1,261 @@
-5.2. Teste e Implantação End-to-End
-Siga estas etapas para executar o sistema completo em uma rede local (LAN).
+# Sistema de Reconhecimento Facial - Raspberry Pi 3
 
-Passo 1: Preparar o Servidor (no Raspberry Pi)
+Sistema de controle de acesso por reconhecimento facial otimizado para Raspberry Pi 3.
+Usa OpenCV LBPH (Local Binary Patterns Histograms) - leve e eficiente para hardware limitado.
 
-Navegue até a pasta servidor_pi/.
+## Arquitetura
 
-Crie um ambiente virtual: python3 -m venv venv e source venv/bin/activate.
+```
+┌─────────────────┐     HTTP/REST     ┌─────────────────────────┐
+│ Cliente Admin   │◄─────────────────►│   Servidor Flask        │
+│ (Notebook)      │                   │   (Raspberry Pi 3)      │
+└─────────────────┘                   │                         │
+                                      │  - OpenCV LBPH          │
+┌─────────────────┐     HTTP/REST     │  - SQLite               │
+│ Cliente Kiosk   │◄─────────────────►│  - Gunicorn (produção)  │
+│ (Terminal)      │                   └─────────────────────────┘
+└─────────────────┘
+```
 
-Instale as dependências: pip install -r requirements.txt.
+## Requisitos do Sistema
 
-Inicialize o banco de dados: flask init-db. Isso criará o arquivo database.db.
+### Raspberry Pi 3 (Servidor)
+- Raspberry Pi OS (32-bit ou 64-bit)
+- Python 3.9+
+- Câmera não necessária no servidor (recebe imagens via HTTP)
 
-Adicione o primeiro administrador (substitua com suas credenciais): flask add-admin seu_admin sua_senha_segura
+### Clientes (Notebook/PC)
+- Windows, Linux ou macOS
+- Python 3.9+
+- Webcam
 
-Passo 2: Iniciar o Servidor de Produção (no Raspberry Pi) O servidor de desenvolvimento do Flask (flask run) não deve ser usado, pois é de thread único. O requisito de ThreadPool (Imagem 2) é satisfeito pelo Gunicorn (RNF-06).   
+---
 
-Execute o Gunicorn: gunicorn --workers 4 --bind 0.0.0.0:5000 "servidor_pi.app:app"
+## Instalação no Raspberry Pi 3 (Servidor)
 
---workers 4: Cria um "pool" de 4 processos de workers para lidar com solicitações concorrentes.   
+### 1. Atualizar o sistema
+```bash
+sudo apt update && sudo apt upgrade -y
+```
 
---bind 0.0.0.0:5000: Instrui o Gunicorn a escutar em todas as interfaces de rede na porta 5000, permitindo que outros dispositivos (os clientes) na sua rede Wi-Fi se conectem a ele.
+### 2. Instalar dependências do sistema
+```bash
+sudo apt install -y python3-pip python3-venv libatlas-base-dev
+```
 
-"servidor_pi.app:app": Informa ao Gunicorn para carregar a variável app do módulo servidor_pi.app.
+### 3. Criar ambiente virtual
+```bash
+cd servidor_pi
+python3 -m venv venv
+source venv/bin/activate
+```
 
-Passo 3: Configurar e Executar o Cliente Admin (no seu Notebook)
+### 4. Instalar dependências Python
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-Obtenha o endereço IP do seu Raspberry Pi (ex: 192.168.1.10).
+Nota: A instalação do opencv-contrib-python-headless pode demorar alguns minutos no Pi.
 
-Navegue até a pasta cliente_admin/.
+### 5. Inicializar o banco de dados
+```bash
+export FLASK_APP=servidor_pi.app
+flask init-db
+```
 
-Crie e ative um ambiente virtual e instale as dependências: pip install -r requirements.txt.
+### 6. Criar o primeiro administrador
+```bash
+flask add-admin admin senha123
+```
 
-Edite o arquivo cliente_admin/admin.py e mude a variável BASE_URL para o IP do seu Pi: BASE_URL = "http://192.168.1.10:5000"
+### 7. Iniciar o servidor (Desenvolvimento)
+```bash
+python -m servidor_pi.app
+```
 
-Execute o cliente: python admin.py.
+### 8. Iniciar o servidor (Produção com Gunicorn)
+```bash
+gunicorn --workers 2 --bind 0.0.0.0:5000 "servidor_pi.app:app"
+```
 
-Faça login com as credenciais criadas no Passo 1.
+Nota: Use 2 workers no Pi 3 (4 pode sobrecarregar a RAM de 1GB).
 
-Use a opção "1. Adicionar Usuario" para cadastrar seu rosto e o de outras pessoas.
+---
 
-Passo 4: Configurar e Executar o Cliente Kiosk (no seu Notebook ou outro PC)
+## Instalação nos Clientes (Notebook/PC)
 
-Navegue até a pasta cliente_acesso/.
+### Cliente Admin (Gerenciamento)
 
-Instale as dependências: pip install -r requirements.txt.
+```bash
+cd cliente_admin
+python -m venv venv
 
-Edite cliente_acesso/kiosk.py e configure o BASE_URL para o IP do Pi: BASE_URL = "http://192.168.1.10:5000"
+# Windows
+venv\Scripts\activate
 
-Execute o cliente: python kiosk.py.
+# Linux/Mac
+source venv/bin/activate
 
-Uma janela da webcam aparecerá. Pressione a barra de ESPAÇO.
+pip install -r requirements.txt
+```
 
-Se tudo estiver configurado corretamente, o Kiosk mostrará "Verificando...", enviará a imagem para o Pi, o Gunicorn em execução no Pi encaminhará a solicitação para um worker, o deepface e o numpy encontrarão a correspondência, e o servidor retornará {"acesso_liberado": True}. O Kiosk então exibirá a imagem unlocked.png por 5 segundos.
+Antes de executar, configure o IP do servidor:
+```bash
+# Windows PowerShell
+$env:SERVER_URL="http://IP_DO_RASPBERRY:5000"
+
+# Linux/Mac
+export SERVER_URL="http://IP_DO_RASPBERRY:5000"
+```
+
+Executar:
+```bash
+python admin.py
+```
+
+### Cliente Kiosk (Verificação de Acesso)
+
+```bash
+cd cliente_acesso
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux/Mac
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Configurar IP do servidor:
+```bash
+# Windows PowerShell
+$env:SERVER_URL="http://IP_DO_RASPBERRY:5000"
+
+# Linux/Mac
+export SERVER_URL="http://IP_DO_RASPBERRY:5000"
+```
+
+Executar:
+```bash
+python kiosk.py
+```
+
+---
+
+## Uso do Sistema
+
+### 1. Cadastrar Usuários (Cliente Admin)
+1. Execute o cliente admin
+2. Faça login com as credenciais do administrador
+3. Selecione "Adicionar Usuário"
+4. Digite o nome e capture a foto do rosto
+
+### 2. Verificar Acesso (Cliente Kiosk)
+1. Execute o cliente kiosk
+2. Pressione ESPAÇO para verificar a face
+3. O sistema mostrará se o acesso foi liberado ou negado
+
+---
+
+## API REST
+
+### Endpoints Públicos
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | /health | Verifica status do servidor |
+| POST | /verify | Verifica face e retorna se acesso é liberado |
+
+### Endpoints Autenticados (JWT)
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | /admin/login | Autentica admin e retorna token |
+| POST | /admin/users/add | Adiciona novo usuário com face |
+| GET | /admin/users | Lista todos os usuários |
+| DELETE | /admin/users/{id} | Remove usuário |
+| GET | /admin/model/stats | Estatísticas do modelo LBPH |
+
+---
+
+## Comandos Flask CLI
+
+```bash
+# Inicializar banco de dados
+flask init-db
+
+# Adicionar administrador
+flask add-admin <username> <password>
+
+# Ver estatísticas do modelo
+flask model-stats
+
+# Limpar modelo LBPH
+flask clear-model
+```
+
+---
+
+## Solução de Problemas
+
+### Erro: "Nenhum rosto detectado"
+- Melhore a iluminação
+- Posicione o rosto de frente para a câmera
+- Mantenha distância adequada (30-80cm)
+
+### Erro de conexão com servidor
+- Verifique se o servidor está rodando
+- Confirme o IP do Raspberry Pi: `hostname -I`
+- Verifique firewall: `sudo ufw allow 5000`
+
+### Modelo não reconhece usuários
+- Cadastre mais fotos do mesmo usuário (diferentes ângulos)
+- Ajuste o limiar em `face_utils.py` (LBPH_THRESHOLD)
+- Valores menores = mais restritivo
+
+### Servidor lento ou travando
+- Use apenas 2 workers no Gunicorn
+- Verifique uso de memória: `free -h`
+- Considere usar swap: `sudo dphys-swapfile setup`
+
+---
+
+## Estrutura de Arquivos
+
+```
+topicosEspeciais/
+├── servidor_pi/          # Servidor (roda no Raspberry Pi)
+│   ├── app.py           # Aplicação Flask
+│   ├── auth_utils.py    # Funções de autenticação
+│   ├── database.py      # Operações SQLite
+│   ├── face_utils.py    # Reconhecimento LBPH
+│   └── requirements.txt
+│
+├── cliente_admin/        # Cliente de gerenciamento
+│   ├── admin.py         # Interface de administração
+│   └── requirements.txt
+│
+├── cliente_acesso/       # Cliente de verificação
+│   ├── kiosk.py         # Interface do kiosk
+│   └── requirements.txt
+│
+├── models/              # Armazena modelo LBPH treinado
+└── logs/                # Logs do sistema
+```
+
+---
+
+## Segurança
+
+- **JWT_SECRET_KEY**: Altere a chave em `app.py` para produção
+- Use HTTPS em produção (configure nginx como proxy reverso)
+- Não exponha a porta 5000 diretamente à internet
+
+---
+
+## Licença
+
+MIT License

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Sistema de Controle de Acesso{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-2">
+    <h1>📋 Log de Acessos</h1>
+    <div class="flex gap-1">
+        <a href="{{ url_for('web_logs') }}?limit=50" class="btn {% if limit == 50 %}btn-primary{% else %}btn-outline{% endif %}">50</a>
+        <a href="{{ url_for('web_logs') }}?limit=100" class="btn {% if limit == 100 %}btn-primary{% else %}btn-outline{% endif %}">100</a>
+        <a href="{{ url_for('web_logs') }}?limit=200" class="btn {% if limit == 200 %}btn-primary{% else %}btn-outline{% endif %}">200</a>
+    </div>
+</div>
+
+<!-- Resumo -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-value">{{ logs|length }}</div>
+        <div class="stat-label">Eventos Exibidos</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ logs|selectattr('event_type', 'equalto', 'access_granted')|list|length }}</div>
+        <div class="stat-label">Acessos Liberados</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-value">{{ logs|selectattr('event_type', 'equalto', 'access_denied')|list|length }}</div>
+        <div class="stat-label">Acessos Negados</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ logs|selectattr('event_type', 'equalto', 'blocked')|list|length }}</div>
+        <div class="stat-label">Bloqueios</div>
+    </div>
+</div>
+
+<!-- Tabela de Logs -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Eventos Recentes</h3>
+    </div>
+    <div class="card-body">
+        {% if logs %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Tipo</th>
+                    <th>IP</th>
+                    <th>Usuário</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs|reverse %}
+                <tr>
+                    <td style="white-space: nowrap;">{{ log.timestamp[:19] }}</td>
+                    <td>
+                        {% if log.event_type == 'access_granted' %}
+                        <span class="badge badge-success">Liberado</span>
+                        {% elif log.event_type == 'access_denied' %}
+                        <span class="badge badge-danger">Negado</span>
+                        {% elif log.event_type == 'blocked' %}
+                        <span class="badge badge-warning">Bloqueado</span>
+                        {% elif log.event_type == 'alert' %}
+                        <span class="badge badge-danger">Alerta</span>
+                        {% else %}
+                        <span class="badge">{{ log.event_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ log.ip_address }}</code></td>
+                    <td>{{ log.user_name or '-' }}</td>
+                    <td>{{ log.details or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            Nenhum evento registrado ainda.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Legenda -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">ℹ️ Legenda</h3>
+    </div>
+    <div class="card-body">
+        <div class="flex gap-2" style="flex-wrap: wrap;">
+            <span><span class="badge badge-success">Liberado</span> Acesso autorizado</span>
+            <span><span class="badge badge-danger">Negado</span> Face não reconhecida</span>
+            <span><span class="badge badge-warning">Bloqueado</span> IP bloqueado por tentativas excessivas</span>
+            <span><span class="badge badge-danger">Alerta</span> Evento de segurança</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

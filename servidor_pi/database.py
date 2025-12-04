@@ -1,14 +1,20 @@
 # servidor_pi/database.py
+"""
+Módulo de banco de dados SQLite para o sistema de reconhecimento facial.
+Armazena admins e usuários. O modelo LBPH é gerenciado por face_utils.py.
+"""
 import sqlite3
-import numpy as np
+import os
 
-DATABASE_FILE = 'servidor_pi/database.db'
+DATABASE_FILE = os.path.join(os.path.dirname(__file__), 'database.db')
+
 
 def get_db_connection():
     """Cria e retorna uma conexão com o banco de dados."""
     conn = sqlite3.connect(DATABASE_FILE)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     """Inicializa o esquema do banco de dados."""
@@ -23,15 +29,8 @@ def init_db():
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS face_encodings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            encoding BLOB NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            name TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
     ]
@@ -42,9 +41,10 @@ def init_db():
             for statement in sql_statements:
                 cursor.execute(statement)
             conn.commit()
-            print("Banco de dados inicializado com sucesso.")
+            print(f"Banco de dados inicializado em: {DATABASE_FILE}")
     except sqlite3.OperationalError as e:
         print(f"Erro ao inicializar o banco de dados: {e}")
+
 
 def add_admin(username, password_hash):
     """Adiciona um novo administrador ao banco de dados."""
@@ -54,6 +54,7 @@ def add_admin(username, password_hash):
             (username, password_hash)
         )
         conn.commit()
+
 
 def get_admin_hash(username):
     """Busca o hash da senha de um admin pelo username."""
@@ -65,6 +66,7 @@ def get_admin_hash(username):
             return admin['password_hash']
     return None
 
+
 def add_user(name):
     """Adiciona um novo usuário e retorna seu ID."""
     with get_db_connection() as conn:
@@ -74,49 +76,40 @@ def add_user(name):
         conn.commit()
         return cursor.lastrowid
 
-def add_face_encoding(user_id, encoding_vector):
-    """Adiciona um encoding facial (vetor numpy) para um usuário."""
-    encoding_blob = encoding_vector.astype(np.float32).tobytes()
-    with get_db_connection() as conn:
-        conn.execute(
-            "INSERT INTO face_encodings (user_id, encoding) VALUES (?,?)",
-            (user_id, encoding_blob)
-        )
-        conn.commit()
 
-def get_all_users_with_names():
+def get_user_by_id(user_id):
+    """Busca um usuário pelo ID."""
+    with get_db_connection() as conn:
+        user = conn.execute(
+            "SELECT id, name FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        if user:
+            return dict(user)
+    return None
+
+
+def get_all_users():
     """Lista todos os usuários (ID e Nome)."""
     with get_db_connection() as conn:
-        users = conn.execute("SELECT id, name FROM users").fetchall()
+        users = conn.execute("SELECT id, name FROM users ORDER BY name").fetchall()
         return [dict(user) for user in users]
 
+
 def delete_user_by_id(user_id):
-    """Deleta um usuário pelo ID. O 'ON DELETE CASCADE' cuidará dos encodings."""
+    """Deleta um usuário pelo ID."""
     with get_db_connection() as conn:
-        conn.execute("DELETE FROM users WHERE id =?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
         conn.commit()
 
-def get_all_encodings():
-    """
-    Busca todos os encodings faciais e os junta com os nomes dos usuários.
-    Retorna uma lista de tuplas: (user_id, name, encoding_vector)
-    """
-    with get_db_connection() as conn:
-        rows = conn.execute("""
-            SELECT u.id, u.name, fe.encoding
-            FROM face_encodings fe
-            JOIN users u ON u.id = fe.user_id
-        """).fetchall()
 
-        encodings_list = []
-        for row in rows:
-            encoding_vector = np.frombuffer(row['encoding'], dtype=np.float32)
-            encodings_list.append({
-                "user_id": row['id'],
-                "name": row['name'],
-                "encoding": encoding_vector
-            })
-        return encodings_list
+def user_exists(user_id):
+    """Verifica se um usuário existe."""
+    with get_db_connection() as conn:
+        result = conn.execute(
+            "SELECT 1 FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        return result is not None
+
 
 if __name__ == '__main__':
     """Permite a inicialização via 'python -m servidor_pi.database'"""

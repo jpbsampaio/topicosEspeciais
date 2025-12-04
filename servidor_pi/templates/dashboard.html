@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistema de Controle de Acesso{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">📊 Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card success">
+        <div class="stat-value">{{ stats.successful }}</div>
+        <div class="stat-label">Acessos Liberados (24h)</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-value">{{ stats.denied }}</div>
+        <div class="stat-label">Acessos Negados (24h)</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ blocked_ips|length }}</div>
+        <div class="stat-label">IPs Bloqueados</div>
+    </div>
+    <div class="stat-card primary">
+        <div class="stat-value">{{ model_stats.total_users }}</div>
+        <div class="stat-label">Usuários Cadastrados</div>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <!-- Acessos por Hora -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📈 Acessos por Hora (24h)</h3>
+        </div>
+        <div class="card-body">
+            {% if stats.by_hour %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Liberados</th>
+                        <th>Negados</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hour, data in stats.by_hour.items()|sort(reverse=True) %}
+                    {% if loop.index <= 12 %}
+                    <tr>
+                        <td>{{ hour }}</td>
+                        <td><span class="badge badge-success">{{ data.granted }}</span></td>
+                        <td><span class="badge badge-danger">{{ data.denied }}</span></td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center" style="color: var(--gray); padding: 2rem;">Nenhum acesso registrado nas últimas 24h</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Usuários mais ativos -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">👥 Usuários Mais Ativos (24h)</h3>
+        </div>
+        <div class="card-body">
+            {% if stats.by_user %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Acessos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user, count in stats.by_user.items()|sort(attribute=1, reverse=True) %}
+                    {% if loop.index <= 10 %}
+                    <tr>
+                        <td>{{ user }}</td>
+                        <td><span class="badge badge-success">{{ count }}</span></td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center" style="color: var(--gray); padding: 2rem;">Nenhum acesso registrado</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Status do Sistema -->
+<div class="card mt-2">
+    <div class="card-header">
+        <h3 class="card-title">🖥️ Status do Sistema</h3>
+    </div>
+    <div class="card-body">
+        <div class="stats-grid" style="margin-bottom: 0;">
+            <div>
+                <strong>Modelo LBPH:</strong>
+                {% if model_stats.model_exists %}
+                <span class="badge badge-success">Carregado</span>
+                {% else %}
+                <span class="badge badge-warning">Não treinado</span>
+                {% endif %}
+            </div>
+            <div>
+                <strong>Limiar LBPH:</strong>
+                {{ model_stats.threshold }}
+            </div>
+            <div>
+                <strong>Backup Automático:</strong>
+                {% if backup_status.auto_backup_running %}
+                <span class="badge badge-success">Ativo</span>
+                {% else %}
+                <span class="badge badge-warning">Inativo</span>
+                {% endif %}
+            </div>
+            <div>
+                <strong>Total de Backups:</strong>
+                {{ backup_status.total_backups }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertas Recentes -->
+{% if alerts %}
+<div class="card mt-2">
+    <div class="card-header">
+        <h3 class="card-title">⚠️ Alertas de Segurança Recentes</h3>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>IP</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts[-5:]|reverse %}
+                <tr>
+                    <td>{{ alert.timestamp }}</td>
+                    <td><code>{{ alert.ip_address }}</code></td>
+                    <td>{{ alert.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

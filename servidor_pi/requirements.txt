@@ -1,8 +1,15 @@
-Flask
-gunicorn
-Flask-JWT-Extended
-Flask-Bcrypt
-deepface
-opencv-python
+# Servidor Flask para Raspberry Pi 3
+# Dependências otimizadas para hardware limitado
+
+Flask>=2.3.0
+gunicorn>=21.0.0
+Flask-JWT-Extended>=4.5.0
+Flask-Bcrypt>=1.0.1
+bcrypt>=4.0.0
+
+# OpenCV é instalado via apt (sudo apt install python3-opencv)
+# NÃO instalar via pip no Raspberry Pi (muito lento/falha)
+# O venv usa --system-site-packages para acessar o OpenCV do sistema
+
+# Numpy - compatível com OpenCV do sistema
 numpy
-# 'deepface' instalara automaticamente tensorflow, keras, etc. [46]

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Segurança - Sistema de Controle de Acesso{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">🛡️ Segurança</h1>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card danger">
+        <div class="stat-value">{{ blocked_ips|length }}</div>
+        <div class="stat-label">IPs Bloqueados</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ alerts|length }}</div>
+        <div class="stat-label">Alertas Recentes</div>
+    </div>
+    <div class="stat-card primary">
+        <div class="stat-value">{{ config.max_attempts }}</div>
+        <div class="stat-label">Máx. Tentativas</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ config.block_duration }}min</div>
+        <div class="stat-label">Duração Bloqueio</div>
+    </div>
+</div>
+
+<!-- IPs Bloqueados -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">🚫 IPs Bloqueados</h3>
+    </div>
+    <div class="card-body">
+        {% if blocked_ips %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Endereço IP</th>
+                    <th>Desbloqueio em</th>
+                    <th>Tempo Restante</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ip in blocked_ips %}
+                <tr>
+                    <td><code>{{ ip.ip }}</code></td>
+                    <td>{{ ip.unblock_at }}</td>
+                    <td>
+                        <span class="badge badge-danger">{{ ip.remaining_seconds // 60 }}min {{ ip.remaining_seconds % 60 }}s</span>
+                    </td>
+                    <td class="text-right">
+                        <form action="{{ url_for('web_unblock_ip') }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="ip" value="{{ ip.ip }}">
+                            <button type="submit" class="btn btn-warning">Desbloquear</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            ✅ Nenhum IP bloqueado no momento
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Alertas de Segurança -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">⚠️ Alertas de Segurança</h3>
+    </div>
+    <div class="card-body">
+        {% if alerts %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Tipo</th>
+                    <th>IP</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts|reverse %}
+                <tr>
+                    <td>{{ alert.timestamp }}</td>
+                    <td><span class="badge badge-danger">{{ alert.event_type }}</span></td>
+                    <td><code>{{ alert.ip_address }}</code></td>
+                    <td>{{ alert.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            ✅ Nenhum alerta de segurança recente
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- IPs com Tentativas Falhas -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📊 Tentativas por IP (24h)</h3>
+    </div>
+    <div class="card-body">
+        {% if stats.by_ip %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Acessos OK</th>
+                    <th>Negados</th>
+                    <th>Taxa de Sucesso</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ip, data in stats.by_ip.items() %}
+                {% set total = data.granted + data.denied %}
+                {% set rate = (data.granted / total * 100) if total > 0 else 0 %}
+                <tr>
+                    <td><code>{{ ip }}</code></td>
+                    <td><span class="badge badge-success">{{ data.granted }}</span></td>
+                    <td><span class="badge badge-danger">{{ data.denied }}</span></td>
+                    <td>
+                        {% if rate >= 80 %}
+                        <span class="badge badge-success">{{ "%.0f"|format(rate) }}%</span>
+                        {% elif rate >= 50 %}
+                        <span class="badge badge-warning">{{ "%.0f"|format(rate) }}%</span>
+                        {% else %}
+                        <span class="badge badge-danger">{{ "%.0f"|format(rate) }}%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            Nenhuma atividade registrada nas últimas 24h
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

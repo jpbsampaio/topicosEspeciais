@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários - Sistema de Controle de Acesso{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-2">
+    <h1>👥 Gerenciar Usuários</h1>
+    <button class="btn btn-primary" onclick="showModal('addUserModal')">+ Adicionar Usuário</button>
+</div>
+
+<!-- Lista de Usuários -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Usuários Cadastrados ({{ users|length }})</h3>
+    </div>
+    <div class="card-body">
+        {% if users %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>No Modelo</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td><strong>{{ user.name }}</strong></td>
+                    <td>
+                        {% if user.id in model_user_ids %}
+                        <span class="badge badge-success">Sim</span>
+                        {% else %}
+                        <span class="badge badge-warning">Não</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <button class="btn btn-danger" onclick="deleteUser({{ user.id }}, '{{ user.name }}')">Excluir</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center" style="color: var(--gray); padding: 2rem;">
+            Nenhum usuário cadastrado.<br>
+            <small>Use o cliente Admin para cadastrar usuários com foto.</small>
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status do Modelo -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">🧠 Status do Modelo LBPH</h3>
+    </div>
+    <div class="card-body">
+        <div class="stats-grid" style="margin-bottom: 1rem;">
+            <div>
+                <strong>Modelo:</strong>
+                {% if model_stats.model_exists %}
+                <span class="badge badge-success">Treinado</span>
+                {% else %}
+                <span class="badge badge-warning">Não existe</span>
+                {% endif %}
+            </div>
+            <div>
+                <strong>Usuários no modelo:</strong>
+                {{ model_stats.total_users }}
+            </div>
+            <div>
+                <strong>Limiar de confiança:</strong>
+                {{ model_stats.threshold }}
+            </div>
+        </div>
+        
+        {% if model_stats.users %}
+        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Usuários treinados:</h4>
+        <ul>
+            {% for user in model_stats.users %}
+            <li>{{ user.name }} (ID: {{ user.user_id }})</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Adicionar Usuário -->
+<div class="modal-backdrop" id="addUserModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Adicionar Usuário</h3>
+            <button class="close-btn" onclick="hideModal('addUserModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('web_add_user') }}" method="POST" enctype="multipart/form-data">
+            <div class="modal-body">
+                <p class="alert alert-warning" style="margin-bottom: 1rem;">
+                    <strong>Nota:</strong> Para melhor reconhecimento, recomendamos usar o cliente Admin 
+                    que permite capturar a foto diretamente da webcam.
+                </p>
+                <div class="form-group">
+                    <label class="form-label" for="name">Nome do Usuário</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="image">Foto do Rosto</label>
+                    <input type="file" class="form-control" id="image" name="image" accept="image/*" required>
+                    <small style="color: var(--gray);">A foto deve conter apenas um rosto visível.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="hideModal('addUserModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteUser(id, name) {
+    if (confirm(`Tem certeza que deseja excluir o usuário "${name}"?\nEsta ação não pode ser desfeita.`)) {
+        fetch(`/web/users/${id}/delete`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erro: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(err => {
+                alert('Erro na requisição: ' + err);
+            });
+    }
+}
+</script>
+{% endblock %}
